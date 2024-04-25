@@ -14,7 +14,7 @@ public class TerminalView extends JPanel {
     private JTextArea rx;
     private JTextField tx;
 
-    public TerminalView() {
+    public TerminalView(RobotContext robotContext) {
         setLayout(new BorderLayout());
 
         rx = new JTextArea();
