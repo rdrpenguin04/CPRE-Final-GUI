@@ -27,8 +27,16 @@ public class TerminalView extends JPanel {
         tx.addActionListener(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("TX: " + tx.getText());
+                robotContext.tx(tx.getText());
                 tx.setText("");
+            }
+        });
+
+        robotContext.addLineListener(new LineListener() {
+            @Override
+            public void lineReceived(String line) {
+                System.out.print("RX: " + line);
+                rx.setText(rx.getText() + line);
             }
         });
 

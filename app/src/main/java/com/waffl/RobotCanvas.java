@@ -26,10 +26,13 @@ public class RobotCanvas extends JPanel {
     private static final int HEIGHT = 1920;
 
     private Point2D robotPos = new Point2D.Double(0.0, 0.0);
+    private double robotAngle = -90.0;
 
     private Point2D arcStart = null;
     private Point2D arcEnd = null;
     private double arcExtent;
+    private double arcMidAngle;
+    private double arcRadius;
 
     private Point2D lineEnd = null;
     private double moveAngle;
@@ -46,7 +49,8 @@ public class RobotCanvas extends JPanel {
             public void mousePressed(MouseEvent e) {
                 Point mousePos = e.getPoint();
                 Point2D mousePos2D = new Point2D.Double(mousePos.x, mousePos.y);
-                if (mousePos.distanceSq(toScreenSpace(robotPos)) > ROBOT_DIAMETER * ROBOT_DIAMETER / 3.8) { // don't question the numbers; they are what they are
+                if (mousePos.distanceSq(toScreenSpace(robotPos)) > ROBOT_DIAMETER * ROBOT_DIAMETER
+                        / 3.8) { // don't question the numbers; they are what they are
                     // Arc
                     arcStart = arcEnd = mousePos2D;
                     repaint();
@@ -60,14 +64,18 @@ public class RobotCanvas extends JPanel {
                 if (arcStart != null) {
                     // Arc
                     arcExtent = Math.abs(arcExtent);
-                    int numPolls = Integer.parseInt((String) JOptionPane.showInputDialog(RobotCanvas.this,
-                            "How many polls should be taken?", "Arc scan",
-                            JOptionPane.QUESTION_MESSAGE, null, null,
-                            String.valueOf((int) arcExtent)));
+                    int numPolls =
+                            Integer.parseInt((String) JOptionPane.showInputDialog(RobotCanvas.this,
+                                    "How many polls should be taken?", "Arc scan",
+                                    JOptionPane.QUESTION_MESSAGE, null, null,
+                                    String.valueOf((int) arcExtent)));
+                    ctx.turn((int) (arcMidAngle - robotAngle));
+                    ctx.startScan(arcRadius, (int) (90 - arcExtent / 2), (int) (90 + arcExtent / 2), numPolls);
                     arcStart = arcEnd = null;
                     repaint();
                 } else {
-                    ctx.startMove((int) moveAngle, (int) moveLen); // this is wrong btw
+                    ctx.turn((int) (moveAngle / Math.PI * 180 - robotAngle));
+                    ctx.move((int) moveLen * 10);
                     lineEnd = null;
                     repaint();
                 }
@@ -114,14 +122,16 @@ public class RobotCanvas extends JPanel {
         // TODO: draw other UI elements
 
         if (arcStart != null) {
-            double startAngle = Math.atan2(robotPos.getY() - arcStart.getY(), arcStart.getX() - robotPos.getX())
-                    / Math.PI * 180;
-            double endAngle = Math.atan2(robotPos.getY() - arcEnd.getY(), arcEnd.getX() - robotPos.getX())
-                    / Math.PI * 180;
+            double startAngle =
+                    Math.atan2(robotPos.getY() - arcStart.getY(), arcStart.getX() - robotPos.getX())
+                            / Math.PI * 180;
+            double endAngle =
+                    Math.atan2(robotPos.getY() - arcEnd.getY(), arcEnd.getX() - robotPos.getX())
+                            / Math.PI * 180;
             arcExtent = endAngle - startAngle;
-            double midAngle = (startAngle + endAngle) / 2;
+            arcMidAngle = (startAngle + endAngle) / 2;
             if (Math.abs(startAngle - endAngle) > 180) {
-                midAngle += 180;
+                arcMidAngle += 180;
             }
 
             if (arcExtent < -180) {
@@ -130,24 +140,32 @@ public class RobotCanvas extends JPanel {
             if (arcExtent > 180) {
                 arcExtent -= 360;
             }
-            double radius = arcEnd.distance(robotPos);
+            arcRadius = arcEnd.distance(robotPos);
             g.setColor(new Color(0, 255, 255, 128));
-            Arc2D arc = new Arc2D.Double(robotPos.getX() - radius, robotPos.getY() - radius,
-                    radius * 2, radius * 2, startAngle, arcExtent, Arc2D.PIE);
+            Arc2D arc = new Arc2D.Double(robotPos.getX() - arcRadius, robotPos.getY() - arcRadius,
+                    arcRadius * 2, arcRadius * 2, startAngle, arcExtent, Arc2D.PIE);
             g.fill(arc);
             g.setStroke(new BasicStroke(1.0f));
             g.setColor(new Color(0, 255, 255));
             g.draw(arc);
             g.draw(new Line2D.Double(robotPos.getX(), robotPos.getY(),
-                    robotPos.getX() + radius * Math.cos(midAngle / 180 * Math.PI),
-                    robotPos.getY() - radius * Math.sin(midAngle / 180 * Math.PI)));
+                    robotPos.getX() + arcRadius * Math.cos(arcMidAngle / 180 * Math.PI),
+                    robotPos.getY() - arcRadius * Math.sin(arcMidAngle / 180 * Math.PI)));
         } else if (lineEnd != null) {
-            moveAngle = Math.atan2(lineEnd.getY() - robotPos.getY(), lineEnd.getX() - robotPos.getX());
-            moveLen = Math.sqrt(Math.pow(robotPos.getY() - lineEnd.getY(), 2) + Math.pow(lineEnd.getX() - robotPos.getX(), 2));
+            moveAngle =
+                    Math.atan2(lineEnd.getY() - robotPos.getY(), lineEnd.getX() - robotPos.getX());
+            moveLen = Math.sqrt(Math.pow(robotPos.getY() - lineEnd.getY(), 2)
+                    + Math.pow(lineEnd.getX() - robotPos.getX(), 2));
             double arrowSize = Math.min(moveLen, 20);
-            Point2D arrowBase = new Point2D.Double(robotPos.getX() + (moveLen - arrowSize) * Math.cos(moveAngle), robotPos.getY() + (moveLen - arrowSize) * Math.sin(moveAngle));
-            Point2D arrowLeft = new Point2D.Double(arrowBase.getX() + arrowSize * Math.sin(moveAngle), arrowBase.getY() - arrowSize * Math.cos(moveAngle));
-            Point2D arrowRight = new Point2D.Double(arrowBase.getX() - arrowSize * Math.sin(moveAngle), arrowBase.getY() + arrowSize * Math.cos(moveAngle));
+            Point2D arrowBase = new Point2D.Double(
+                    robotPos.getX() + (moveLen - arrowSize) * Math.cos(moveAngle),
+                    robotPos.getY() + (moveLen - arrowSize) * Math.sin(moveAngle));
+            Point2D arrowLeft =
+                    new Point2D.Double(arrowBase.getX() + arrowSize * Math.sin(moveAngle),
+                            arrowBase.getY() - arrowSize * Math.cos(moveAngle));
+            Point2D arrowRight =
+                    new Point2D.Double(arrowBase.getX() - arrowSize * Math.sin(moveAngle),
+                            arrowBase.getY() + arrowSize * Math.cos(moveAngle));
             g.setStroke(new BasicStroke(1.0f));
             g.setColor(new Color(0, 255, 255));
             g.draw(new Line2D.Double(robotPos, lineEnd));
