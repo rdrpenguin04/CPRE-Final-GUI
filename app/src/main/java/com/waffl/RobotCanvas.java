@@ -26,9 +26,14 @@ public class RobotCanvas extends JPanel {
     private static final int HEIGHT = 1920;
 
     private Point2D robotPos = new Point2D.Double(0.0, 0.0);
+
     private Point2D arcStart = null;
     private Point2D arcEnd = null;
     private double arcExtent;
+
+    private Point2D lineEnd = null;
+    private double moveAngle;
+    private double moveLen;
 
     private static Point2D toScreenSpace(Point2D in) {
         return new Point2D.Double(in.getX() + WIDTH / 2, in.getY() + HEIGHT / 2);
@@ -40,12 +45,13 @@ public class RobotCanvas extends JPanel {
             @Override
             public void mousePressed(MouseEvent e) {
                 Point mousePos = e.getPoint();
-                if (mousePos.distanceSq(robotPos) > ROBOT_DIAMETER * ROBOT_DIAMETER / 4) {
+                Point2D mousePos2D = new Point2D.Double(mousePos.x, mousePos.y);
+                if (mousePos.distanceSq(toScreenSpace(robotPos)) > ROBOT_DIAMETER * ROBOT_DIAMETER / 3.8) { // don't question the numbers; they are what they are
                     // Arc
-                    arcStart = arcEnd = new Point2D.Double(mousePos.x, mousePos.y);
+                    arcStart = arcEnd = mousePos2D;
                     repaint();
                 } else {
-                    // Move
+                    lineEnd = mousePos2D;
                 }
             }
 
@@ -61,7 +67,9 @@ public class RobotCanvas extends JPanel {
                     arcStart = arcEnd = null;
                     repaint();
                 } else {
-                    // TODO
+                    ctx.startMove((int) moveAngle, (int) moveLen); // this is wrong btw
+                    lineEnd = null;
+                    repaint();
                 }
             }
         });
@@ -71,6 +79,10 @@ public class RobotCanvas extends JPanel {
                 if (arcStart != null) {
                     Point mousePos = e.getPoint();
                     arcEnd = new Point2D.Double(mousePos.x, mousePos.y);
+                    repaint();
+                } else if (lineEnd != null) {
+                    Point mousePos = e.getPoint();
+                    lineEnd = new Point2D.Double(mousePos.x, mousePos.y);
                     repaint();
                 } else
                     super.mouseMoved(e);
@@ -129,6 +141,20 @@ public class RobotCanvas extends JPanel {
             g.draw(new Line2D.Double(robotPos.getX(), robotPos.getY(),
                     robotPos.getX() + radius * Math.cos(midAngle / 180 * Math.PI),
                     robotPos.getY() - radius * Math.sin(midAngle / 180 * Math.PI)));
+        } else if (lineEnd != null) {
+            moveAngle = Math.atan2(lineEnd.getY() - robotPos.getY(), lineEnd.getX() - robotPos.getX());
+            moveLen = Math.sqrt(Math.pow(robotPos.getY() - lineEnd.getY(), 2) + Math.pow(lineEnd.getX() - robotPos.getX(), 2));
+            double arrowSize = Math.min(moveLen, 20);
+            Point2D arrowBase = new Point2D.Double(robotPos.getX() + (moveLen - arrowSize) * Math.cos(moveAngle), robotPos.getY() + (moveLen - arrowSize) * Math.sin(moveAngle));
+            Point2D arrowLeft = new Point2D.Double(arrowBase.getX() + arrowSize * Math.sin(moveAngle), arrowBase.getY() - arrowSize * Math.cos(moveAngle));
+            Point2D arrowRight = new Point2D.Double(arrowBase.getX() - arrowSize * Math.sin(moveAngle), arrowBase.getY() + arrowSize * Math.cos(moveAngle));
+            g.setStroke(new BasicStroke(1.0f));
+            g.setColor(new Color(0, 255, 255));
+            g.draw(new Line2D.Double(robotPos, lineEnd));
+            g.draw(new Line2D.Double(lineEnd, arrowLeft));
+            g.draw(new Line2D.Double(lineEnd, arrowRight));
+            g.draw(new Line2D.Double(arrowLeft, arrowRight));
         }
     }
 }
+

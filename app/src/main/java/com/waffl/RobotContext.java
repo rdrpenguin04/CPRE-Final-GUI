@@ -9,4 +9,8 @@ public class RobotContext {
     public void startScan(double maxDist, int startAngle, int endAngle, int numPolls) {
 
     }
+
+    public void startMove(int angle, int dist) {
+
+    }
 }
