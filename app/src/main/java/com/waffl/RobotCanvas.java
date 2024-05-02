@@ -76,18 +76,18 @@ public class RobotCanvas extends JPanel {
                             "How many polls should be taken?", "Arc scan",
                             JOptionPane.QUESTION_MESSAGE, null, null,
                             String.valueOf((int) arcExtent));
-                    if (pollsText == null)
-                        return; // Cancel
-                    ctx.turn((int) (-arcMidAngle - robotAngle));
-                    if (pollsText.equals("ping")) {
-                        ctx.tx("x p 90");
-                    } else if (pollsText.equals("clear")) {
-                        scanPoints.clear();
-                        scanPointIsPing.clear();
-                    } else {
-                        int numPolls = Integer.parseInt(pollsText);
-                        ctx.startScan(arcRadius, (int) (90 - arcExtent / 2),
-                                (int) (90 + arcExtent / 2), numPolls);
+                    if (pollsText != null) {
+                        ctx.turn((int) (-arcMidAngle - robotAngle));
+                        if (pollsText.equals("ping")) {
+                            ctx.tx("x p 90");
+                        } else if (pollsText.equals("clear")) {
+                            scanPoints.clear();
+                            scanPointIsPing.clear();
+                        } else {
+                            int numPolls = Integer.parseInt(pollsText);
+                            ctx.startScan(arcRadius, (int) (90 - arcExtent / 2),
+                                    (int) (90 + arcExtent / 2), numPolls);
+                        }
                     }
                     arcStart = arcEnd = null;
                     repaint();
