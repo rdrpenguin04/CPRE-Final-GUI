@@ -9,6 +9,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.text.DefaultCaret;
 
 public class TerminalView extends JPanel {
     private JTextArea rx;
@@ -44,5 +45,8 @@ public class TerminalView extends JPanel {
         add(tx, BorderLayout.SOUTH);
 
         setMinimumSize(new Dimension(640, 360));
+
+        DefaultCaret caret = (DefaultCaret) rx.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
     }
 }

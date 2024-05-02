@@ -14,6 +14,8 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -28,6 +30,9 @@ public class RobotCanvas extends JPanel {
     private Point2D robotPos = new Point2D.Double(0.0, 0.0);
     private double robotAngle = -90.0;
 
+    private Point2D robotPosMark;
+    private double robotAngleMark;
+
     private Point2D arcStart = null;
     private Point2D arcEnd = null;
     private double arcExtent;
@@ -37,6 +42,9 @@ public class RobotCanvas extends JPanel {
     private Point2D lineEnd = null;
     private double moveAngle;
     private double moveLen;
+
+    private List<Point2D> scanPoints = new ArrayList<>();
+    private List<Boolean> scanPointIsPing = new ArrayList<>();
 
     private static Point2D toScreenSpace(Point2D in) {
         return new Point2D.Double(in.getX() + WIDTH / 2, in.getY() + HEIGHT / 2);
@@ -64,13 +72,23 @@ public class RobotCanvas extends JPanel {
                 if (arcStart != null) {
                     // Arc
                     arcExtent = Math.abs(arcExtent);
-                    int numPolls =
-                            Integer.parseInt((String) JOptionPane.showInputDialog(RobotCanvas.this,
-                                    "How many polls should be taken?", "Arc scan",
-                                    JOptionPane.QUESTION_MESSAGE, null, null,
-                                    String.valueOf((int) arcExtent)));
-                    ctx.turn((int) (arcMidAngle - robotAngle));
-                    ctx.startScan(arcRadius, (int) (90 - arcExtent / 2), (int) (90 + arcExtent / 2), numPolls);
+                    String pollsText = (String) JOptionPane.showInputDialog(RobotCanvas.this,
+                            "How many polls should be taken?", "Arc scan",
+                            JOptionPane.QUESTION_MESSAGE, null, null,
+                            String.valueOf((int) arcExtent));
+                    if (pollsText == null)
+                        return; // Cancel
+                    ctx.turn((int) (-arcMidAngle - robotAngle));
+                    if (pollsText.equals("ping")) {
+                        ctx.tx("x p 90");
+                    } else if (pollsText.equals("clear")) {
+                        scanPoints.clear();
+                        scanPointIsPing.clear();
+                    } else {
+                        int numPolls = Integer.parseInt(pollsText);
+                        ctx.startScan(arcRadius, (int) (90 - arcExtent / 2),
+                                (int) (90 + arcExtent / 2), numPolls);
+                    }
                     arcStart = arcEnd = null;
                     repaint();
                 } else {
@@ -96,6 +114,41 @@ public class RobotCanvas extends JPanel {
                     super.mouseMoved(e);
             }
         });
+        ctx.addRobotMovementListener(new RobotMovementListener() {
+            @Override
+            public void robotStartedMovement() {
+                robotPosMark = (Point2D) robotPos.clone();
+                robotAngleMark = robotAngle;
+            }
+
+            @Override
+            public void robotMoved(double dist) {
+                dist /= 10;
+                robotPos.setLocation(robotPosMark.getX() + dist * Math.cos(robotAngle * Math.PI / 180), robotPosMark.getY() + dist * Math.sin(robotAngle * Math.PI / 180));
+                repaint();
+            }
+
+            @Override
+            public void robotTurned(double angle) {
+                robotAngle = robotAngleMark + angle;
+                repaint();
+            }
+        });
+        ctx.addRobotScanListener(new RobotScanListener() {
+            @Override
+            public void ir(double angle, double dist) {
+                scanPointIsPing.add(false);
+                scanPoints.add(new Point2D.Double(robotPos.getX() + dist * Math.sin((robotAngle + angle) * Math.PI / 180), robotPos.getY() + dist * -Math.cos((robotAngle + angle) * Math.PI / 180)));
+                repaint();
+            }
+
+            @Override
+            public void ping(double angle, double dist) {
+                scanPointIsPing.add(true);
+                scanPoints.add(new Point2D.Double(robotPos.getX() + dist * Math.sin((robotAngle + angle) * Math.PI / 180), robotPos.getY() + dist * -Math.cos((robotAngle + angle) * Math.PI / 180)));
+                repaint();
+            }
+        });
     }
 
     @Override
@@ -107,6 +160,7 @@ public class RobotCanvas extends JPanel {
         // Draw CyBot / Waff-L
         var robotPos = toScreenSpace(this.robotPos);
         g.translate(robotPos.getX(), robotPos.getY());
+        g.rotate((robotAngle + 90) * Math.PI / 180);
         g.setColor(Color.GRAY);
         g.fill(new Ellipse2D.Double(-ROBOT_DIAMETER / 2, -ROBOT_DIAMETER / 2, ROBOT_DIAMETER,
                 ROBOT_DIAMETER));
@@ -119,7 +173,13 @@ public class RobotCanvas extends JPanel {
         g.dispose();
 
         g = (Graphics2D) _g.create();
-        // TODO: draw other UI elements
+
+        for (int i = 0; i < scanPoints.size(); i++) {
+            g.setColor(scanPointIsPing.get(i) ? Color.GREEN : Color.RED);
+            double size = scanPointIsPing.get(i) ? 10 : 2;
+            Point2D point = toScreenSpace(scanPoints.get(i));
+            g.fill(new Ellipse2D.Double(point.getX() - size / 2, point.getY() - size / 2, size, size));
+        }
 
         if (arcStart != null) {
             double startAngle =
