@@ -54,11 +54,10 @@ public class RobotCanvas extends JPanel {
                 if (arcStart != null) {
                     // Arc
                     arcExtent = Math.abs(arcExtent);
-                    int numPolls =
-                            Integer.parseInt((String) JOptionPane.showInputDialog(RobotCanvas.this,
-                                    "How many polls should be taken?", "Arc scan",
-                                    JOptionPane.QUESTION_MESSAGE, null, null,
-                                    String.valueOf((int) arcExtent)));
+                    int numPolls = Integer.parseInt((String) JOptionPane.showInputDialog(RobotCanvas.this,
+                            "How many polls should be taken?", "Arc scan",
+                            JOptionPane.QUESTION_MESSAGE, null, null,
+                            String.valueOf((int) arcExtent)));
                     arcStart = arcEnd = null;
                     repaint();
                 } else {
@@ -103,14 +102,16 @@ public class RobotCanvas extends JPanel {
         // TODO: draw other UI elements
 
         if (arcStart != null) {
-            double startAngle =
-                    Math.atan2(robotPos.getY() - arcStart.getY(), arcStart.getX() - robotPos.getX())
-                            / Math.PI * 180;
-            double endAngle =
-                    Math.atan2(robotPos.getY() - arcEnd.getY(), arcEnd.getX() - robotPos.getX())
-                            / Math.PI * 180;
+            double startAngle = Math.atan2(robotPos.getY() - arcStart.getY(), arcStart.getX() - robotPos.getX())
+                    / Math.PI * 180;
+            double endAngle = Math.atan2(robotPos.getY() - arcEnd.getY(), arcEnd.getX() - robotPos.getX())
+                    / Math.PI * 180;
             arcExtent = endAngle - startAngle;
-            double midAngle = Math.acos(endAngle);
+            double midAngle = (startAngle + endAngle) / 2;
+            if (Math.abs(startAngle - endAngle) > 180) {
+                midAngle += 180;
+            }
+
             if (arcExtent < -180) {
                 arcExtent += 360;
             }
